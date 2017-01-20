@@ -106,3 +106,12 @@ xyplot( m2s ~ m1s , auto.key=TRUE, lwd=2,type=c("p",'g','smooth'),scale=list(tic
 xyplot( m2n ~ m1n , auto.key=TRUE, lwd=2,type=c("p",'g','smooth'),scale=list(tick.num=20),data=p9d[order(m1n),][m1n<0.4,],main="m2 normalized vs m1 normalized (for values <0.4)")
 ```
 
+## Quick Conclusions
+
+The graphs appear to indicate
+- the move similarly, though $m1$ seems to be higher than $m2$
+- they are very much related (functionally) 
+  - though there is some scatter around the regression line, it is small
+- they do seem mostly proxy for each other, neither adding much information to
+  the other.
+
