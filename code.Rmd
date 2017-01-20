@@ -109,9 +109,13 @@ xyplot( m2n ~ m1n , auto.key=TRUE, lwd=2,type=c("p",'g','smooth'),scale=list(tic
 ## Quick Conclusions
 
 The graphs appear to indicate
-- the move similarly, though $m1$ seems to be higher than $m2$
-- they are very much related (functionally) 
-  - though there is some scatter around the regression line, it is small
-- they do seem mostly proxy for each other, neither adding much information to
+
+1. the move similarly, though $m1$ seems to be higher than $m2$
+
+2. they are very much related (functionally) 
+
+     - though there is some scatter around the regression line, it is small
+
+3. they do seem mostly proxy for each other, neither adding much information to
   the other.
 
