@@ -113,9 +113,9 @@ The graphs appear to indicate
 1. the move similarly, though $m1$ seems to be higher than $m2$
 
 2. they are very much related (functionally) 
-
      - though there is some scatter around the regression line, it is small
-
+     - the correlation between the time series is 0.95 (pearson) and 0.85
+       (spearmans) and 0.68 (kendall)
 3. they do seem mostly proxy for each other, neither adding much information to
   the other.
 
