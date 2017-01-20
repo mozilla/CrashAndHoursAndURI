@@ -1,0 +1,108 @@
+---
+title: "crashes with respect to hours and URI"
+output:
+  html_document:
+    mathjax: default
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: united
+    highlight: haddock
+    fig_width: 6
+    fig_height: 4
+    fig_caption: true
+    code_folding: hide
+---
+
+The data set is extracted using the following python query
+
+```{python, eval=FALSE}
+u1 = u0.filter("app_name='Firefox' and normalized_channel='release'
+                 and os='Windows_NT' and sample_id in ({})".format( ",".join(samplechar)))
+ms4 = sqlContext.sql("""
+select 
+client_id,
+app_version                     as version,
+os_version                      as osversion,
+submission_date                 as date,
+sum(crashes_detected_content)   as contentcrashes,
+sum(crashes_detected_gmplugin)  as mediacrashes,
+sum(crashes_detected_plugin)    as plugincrashes,
+sum(crash_submit_success_main)  as browsercrash,
+sum(subsession_length)/3600     as hrs,
+sum(total_uri_count)            as uri,
+sum(unique_domains_count)       as domain
+from ms3
+where submission_date>='20161201' and os_version in ('6.1', '6.2', '6.3', '10.0')
+group by 1,2,3,4
+""")
+
+write = pyspark.sql.DataFrameWriter(ms4.coalesce(100))
+write.csv(path="s3://mozilla-metrics/sguha/uricrashes/",mode='overwrite',nullValue="NA",header=True)
+```
+
+The end date for data is roughly mid January,2017.
+
+
+## Is  m1=crashes/total hours substantially different from m2=crashes/URI
+
+The question is better phrased as: do the two measures behave in a similar
+manner i.e.
+
+- do they have the same day of week effect?
+- do they have the same trend?
+- do they have the same larger seasonal cycles?
+- are they correlated across time?
+
+If the above questions are answered positively, we can use one in place of the
+of the other. Rather since crashes/total hours is what is being used now, it
+might not be needed to substitute it with crashes/URI.
+
+## By clients
+
+I studied the relationship of m1 and m2 per client and aggregated it above
+(across their time period of activity in the dataset which is typically 16
+days). For those profiles with at least 3 days of activity the kendall
+correlation coefficient for m1 and m2 is greater than 0.9. Since crashes are
+rare events(and so crash rate is mostly 0), this is not really informative.
+
+```{r, eval=FALSE,tidy=TRUE}
+p6 <- t(map=function(a,b){
+    if(nrow(b)>5){
+        x <- runif(1)
+        co <- b[hrs>0 & uri>0,][,list(cid=rep(x,.N),c=contentcr+allplugincr,u= uri,h=hrs)]
+        rhcollect(sample(1:100,1), co)
+    }}, reduce=dtbinder)
+p6d <- rbindlist(lapply(p6$collect(), "[[",2))
+p6d5 <- p6d[,.SD[c>0,], by=cid][,if(.N>2) list(cr=cor(c/(h+1),c/(u+1)
+                                                     ,use='pairwise.complete.obs',method='kendall'))
+                               ,by=cid]
+```
+
+For profiles that have more than 3 days with crashes, the correlation for m1 and
+m2 computed for those days with crashes the median correlation is 0.410 (mean is
+0.41) and 30% have correlations larger than 0.66.
+
+## The relationship between the time series graphs of m1 and m2
+
+What most people will think of is how do the time series i.e. (date,m1) and
+(date,m2) relate to each other. The following is a figure with both graphs
+normalized to [0,1] (m1n and m2n). Also the figures have been scaled (by their
+mean and standard deviation) (m1s and m2s).
+
+
+
+```{r fig.cap="Fig 0. Scaled m1 and m2", fig.width=9,fig.height=6,fig.align='center'}
+xyplot( m1s + m2s ~ as.Date(date), auto.key=TRUE, lwd=2,type=c("l",'g'),scale=list(tick.num=20),data=p9d)
+```
+
+```{r fig.cap="Fig 1. Normalized m1 and m2", fig.width=9,fig.height=6,fig.align='center'}
+xyplot( m1n + m2n ~ as.Date(date), auto.key=TRUE, lwd=2,type=c("l",'g'),scale=list(tick.num=20),data=p9d)
+```
+
+
+```{r fig.cap="Fig 2. m2 vs m1", fig.width=9,fig.height=6,fig.align='center'}
+xyplot( m2s ~ m1s , auto.key=TRUE, lwd=2,type=c("p",'g','smooth'),scale=list(tick.num=20),data=p9d[order(m1s),][m1n<0.4,],main="m2 scaled vs m1 scaled (for values <0.4)")
+xyplot( m2n ~ m1n , auto.key=TRUE, lwd=2,type=c("p",'g','smooth'),scale=list(tick.num=20),data=p9d[order(m1n),][m1n<0.4,],main="m2 normalized vs m1 normalized (for values <0.4)")
+```
+

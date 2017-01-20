@@ -1,0 +1,62 @@
+u0 = sqlContext.read.load("s3://telemetry-parquet/main_summary/v3", "parquet",mergeSchema=True)
+u1 = u0.select(u0.client_id,
+               u0.sample_id, #remove when ready to do all counts
+               u0.app_name.alias("appname"),
+               u0.crash_submit_success_main.alias("crashmain"),
+               u0.crashes_detected_content.alias("crashcontent"),
+               u0.subsession_start_date.substr(1,10).alias("date"),
+               u0.subsession_length.alias("length"),
+               u0.total_uri_count.alias("uri"),
+               u0.unique_domains_count.alias("domain"))
+
+
+from datetime import date, datetime, timedelta as td
+START = "2016-10-29"
+END = "2016-12-04"
+
+d1 = datetime.strptime(START, "%Y-%m-%d")
+d2 = datetime.strptime(END, "%Y-%m-%d")
+
+delta = d2 - d1
+
+l_dates = []
+for i in range(delta.days + 1):
+    l_dates.append(datetime.strftime((d1 + td(days=i)), "%Y-%m-%d"))
+
+u2 = u1.filter(u1.appname == "Firefox")\
+       .filter(u1.date >= START)\
+       .filter(u1.date <= END)
+       ## .filter(u1.sample_id.between("11","20"))# comment out if needed
+
+sqlContext.registerDataFrameAsTable(u2, "U")
+v=sqlContext.sql("""
+select date,
+      count(distinct client_id)*1 as DAU,
+      sum(crashmain)*1 as tcrashmain,
+      sum(crashcontent)*1 as tcrashcontent,
+      sum(length)*1 as tseconds,
+      sum(uri)*1 as totaluri,
+      sum(domain)*1 as tdomain
+from U 
+where date >='2016-10-29'  and date <='2016-12-04' 
+group by date
+""").collect()
+
+################################################################################
+## R Mode
+################################################################################
+## See https://docs.google.com/document/d/1jzcEPI4NLlar102kS1WBv1cgnxDULYQNl4VawmQEr5c/edit#
+
+setnames(x, c("date","tdau","tcrashmain","tcrashcontent","tseconds","turi","tdomain"))
+x[, tcrashmain2:=tcrashmain/0.31]
+x[, "crashPURI":=(tcrashmain2+tcrashcontent)/turi]
+x[, "crashPDomain":=(tcrashmain2+tcrashcontent)/tdomain]
+x[,  domain2uri:=tdomain/turi]
+x <- x[order(date),]
+
+xyplot( crashPURI ~ as.Date(date), type=c('b','g'),lwd=2, xlab='Date',data=x,
+       ylab=list('main-crashes + content-crashes(includes shutdowns) per total_uri_count',cex=0.6))
+xyplot( crashPDomain ~ as.Date(date), type=c('b','g'),lwd=2, xlab='Date',data=x,
+       ylab=list('main-crashes + content-crashes(includes shutdowns) per unique_domains_coun',cex=0.6))
+xyplot( domain2uri ~ as.Date(date), type=c('b','g'),lwd=2, xlab='Date',data=x,
+       ylab=list('unique_domains_coun to total_uri_count',cex=0.6))
