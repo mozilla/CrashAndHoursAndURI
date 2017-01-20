@@ -13,7 +13,7 @@ output:
     fig_caption: true
     code_folding: hide
 ---
-
+(View HTML version of this file by placing the URL in http://htmlpreview.github.io/)
 The data set is extracted using the following python query
 
 ```{python, eval=FALSE}

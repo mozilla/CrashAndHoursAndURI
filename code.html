@@ -110,7 +110,7 @@ img {
 </ul>
 </div>
 
-<p>The data set is extracted using the following python query</p>
+<p>(View HTML version of this file by placing the URL in <a href="http://htmlpreview.github.io/" class="uri">http://htmlpreview.github.io/</a>) The data set is extracted using the following python query</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">u1 <span class="op">=</span> u0.<span class="bu">filter</span>(<span class="st">&quot;app_name='Firefox' and normalized_channel='release'</span>
 <span class="st">                 and os='Windows_NT' and sample_id in (</span><span class="sc">{}</span><span class="st">)&quot;</span>.<span class="bu">format</span>( <span class="st">&quot;,&quot;</span>.join(samplechar)))
 ms4 <span class="op">=</span> sqlContext.sql(<span class="st">&quot;&quot;&quot;</span>
